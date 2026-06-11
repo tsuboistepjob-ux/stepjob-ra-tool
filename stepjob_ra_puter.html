@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Stepjob RA — 商談前サマリー生成ツール</title>
+<script src="https://js.puter.com/v2/"></script>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Syne:wght@600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --g900:#052e16;--g800:#14532d;--g700:#15803d;--g600:#16a34a;
+  --g400:#4ade80;--g200:#bbf7d0;--g100:#dcfce7;--g050:#f0fdf4;
+  --o700:#c2410c;--o600:#ea580c;--o500:#f97316;--o400:#fb923c;
+  --o200:#fed7aa;--o100:#ffedd5;
+  --n900:#111827;--n800:#1f2937;--n700:#374151;--n600:#4b5563;
+  --n500:#6b7280;--n400:#9ca3af;--n300:#d1d5db;--n200:#e5e7eb;
+  --n100:#f3f4f6;--n050:#f9fafb;
+  --r500:#ef4444;--r100:#fee2e2;--b500:#3b82f6;--b100:#dbeafe;
+  --a500:#f59e0b;--a100:#fef3c7;
+  --fd:'Syne',sans-serif;--fb:'Noto Sans JP',sans-serif;--fm:'DM Mono',monospace;
+  --ease:cubic-bezier(.4,0,.2,1);
+}
+html{scroll-behavior:smooth}
+body{font-family:var(--fb);background:var(--n100);color:var(--n900);min-height:100vh;font-size:14px;line-height:1.6;-webkit-font-smoothing:antialiased}
+
+/* ─ APP SHELL ─ */
+.app{display:grid;grid-template-columns:300px 1fr;grid-template-rows:54px 1fr;min-height:100vh}
+
+/* ─ TOPBAR ─ */
+.topbar{grid-column:1/-1;background:var(--g900);display:flex;align-items:center;padding:0 20px;gap:10px;border-bottom:2.5px solid var(--o500);position:sticky;top:0;z-index:200}
+.logo{font-family:var(--fd);font-size:18px;font-weight:800;color:#fff;letter-spacing:-.5px}
+.logo span{color:var(--o400)}
+.logo-bdg{margin-left:10px;font-family:var(--fd);font-size:9px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;background:var(--o500);color:#fff;padding:2px 9px;border-radius:20px}
+.topbar-right{margin-left:auto;display:flex;align-items:center;gap:8px}
+.free-pill{display:flex;align-items:center;gap:6px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:20px;padding:0 12px;height:30px;font-size:11px;color:rgba(255,255,255,.6)}
+.free-dot{width:7px;height:7px;border-radius:50%;background:var(--g400);box-shadow:0 0 7px var(--g400)}
+
+/* ─ SIDEBAR ─ */
+.sidebar{background:#fff;border-right:1px solid var(--n200);display:flex;flex-direction:column;overflow:hidden}
+.sb-body{flex:1;overflow-y:auto;padding:18px 15px}
+.sb-body::-webkit-scrollbar{width:3px}
+.sb-body::-webkit-scrollbar-thumb{background:var(--n200);border-radius:4px}
+.sec{font-size:9px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--n400);margin:15px 0 8px;display:flex;align-items:center;gap:6px}
+.sec:first-child{margin-top:0}
+.sec::after{content:'';flex:1;height:1px;background:var(--n200)}
+.field{display:flex;flex-direction:column;gap:4px;margin-bottom:9px}
+.field label{font-size:11px;font-weight:500;color:var(--n700)}
+.req{color:var(--o500)}
+.field input,.field select,.field textarea{
+  font-family:var(--fb);font-size:12px;color:var(--n900);
+  background:var(--n050);border:1px solid var(--n200);border-radius:7px;
+  padding:7px 10px;outline:none;width:100%;
+  transition:border-color .15s var(--ease),box-shadow .15s var(--ease),background .15s var(--ease);
+  -webkit-appearance:none
+}
+.field input:focus,.field select:focus,.field textarea:focus{
+  border-color:var(--g600);box-shadow:0 0 0 3px rgba(22,163,74,.12);background:#fff
+}
+.field textarea{resize:vertical;min-height:60px;line-height:1.5}
+.hint{font-size:10px;color:var(--n400);line-height:1.4}
+.sb-footer{padding:13px 15px;background:var(--n050);border-top:1px solid var(--n200);flex-shrink:0;display:flex;flex-direction:column;gap:7px}
+.btn-gen{
+  font-family:var(--fd);font-size:13px;font-weight:700;letter-spacing:.02em;color:#fff;
+  background:var(--g700);border:none;border-radius:9px;padding:12px 16px;cursor:pointer;
+  width:100%;display:flex;align-items:center;justify-content:center;gap:8px;
+  transition:background .15s var(--ease),transform .1s var(--ease),box-shadow .15s var(--ease);
+  position:relative;overflow:hidden
+}
+.btn-gen::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,255,255,.1) 0%,transparent 55%);pointer-events:none}
+.btn-gen:hover{background:var(--g600);box-shadow:0 4px 14px rgba(22,163,74,.3)}
+.btn-gen:active{transform:scale(.98)}
+.btn-gen:disabled{background:var(--n400);box-shadow:none;cursor:not-allowed;transform:none}
+.sc{text-align:center;font-size:10px;color:var(--n400)}
+.sc kbd{font-family:var(--fm);font-size:9px;background:var(--n200);border-radius:3px;padding:1px 5px;border-bottom:1px solid var(--n300)}
+
+/* ─ MAIN ─ */
+.main{padding:24px 28px;overflow-y:auto;display:flex;flex-direction:column;gap:16px}
+.main::-webkit-scrollbar{width:4px}
+.main::-webkit-scrollbar-thumb{background:var(--n200);border-radius:4px}
+
+/* empty */
+.st-empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:60px 20px;text-align:center}
+.ei{width:62px;height:62px;background:var(--g050);border:1px solid var(--g200);border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:26px}
+.et{font-family:var(--fd);font-size:18px;font-weight:700;color:var(--n700)}
+.ed{font-size:13px;color:var(--n500);max-width:360px;line-height:1.65}
+.e-steps{display:flex;gap:10px;margin-top:6px;align-items:center}
+.e-step{display:flex;flex-direction:column;align-items:center;gap:5px;max-width:90px}
+.e-num{width:26px;height:26px;background:var(--g800);color:#fff;border-radius:50%;font-family:var(--fd);font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center}
+.e-arr{font-size:16px;color:var(--n300)}
+.e-step p{font-size:11px;color:var(--n500);text-align:center;line-height:1.4}
+
+/* loading */
+.st-load{display:none;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:80px 20px}
+.ring{width:40px;height:40px;border:3px solid var(--g100);border-top-color:var(--g600);border-radius:50%;animation:spin .75s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.ls-wrap{display:flex;flex-direction:column;gap:5px;text-align:center}
+.ls{font-size:12px;color:var(--n400);opacity:0;transform:translateY(4px);transition:opacity .35s var(--ease),transform .35s var(--ease),color .35s}
+.ls.on{opacity:1;transform:translateY(0);color:var(--n700)}
+.ls.done{opacity:1;transform:translateY(0);color:var(--g600)}
+
+/* result */
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.r-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;animation:fadeUp .3s .02s both}
+.r-name{font-family:var(--fd);font-size:22px;font-weight:800;color:var(--n900);letter-spacing:-.5px}
+.r-meta{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:4px}
+.r-meta span{font-size:11px;color:var(--n500)}
+.r-acts{display:flex;gap:6px;flex-shrink:0}
+.btn-act{font-family:var(--fb);font-size:11px;font-weight:500;color:var(--n600);background:#fff;border:1px solid var(--n200);border-radius:7px;padding:5px 12px;cursor:pointer;display:inline-flex;align-items:center;gap:4px;transition:all .15s}
+.btn-act:hover{background:var(--n050);border-color:var(--n300)}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:13px}
+.g1{display:grid;grid-template-columns:1fr;gap:13px}
+.card{background:#fff;border:1px solid var(--n200);border-radius:13px;overflow:hidden;opacity:0;box-shadow:0 1px 3px rgba(0,0,0,.04);animation:fadeUp .38s both}
+.card:nth-child(1){animation-delay:.04s}.card:nth-child(2){animation-delay:.09s}
+.card:nth-child(3){animation-delay:.14s}.card:nth-child(4){animation-delay:.19s}
+.card:nth-child(5){animation-delay:.24s}.card:nth-child(6){animation-delay:.29s}
+.card:nth-child(7){animation-delay:.34s}.card:nth-child(8){animation-delay:.39s}
+.card.tg{border-top:3px solid var(--g600)}.card.to{border-top:3px solid var(--o500)}
+.card.tb{border-top:3px solid var(--b500)}.card.ta{border-top:3px solid var(--a500)}
+.card.tr{border-top:3px solid var(--r500)}
+.ch{padding:11px 15px 9px;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--n100)}
+.ci{width:24px;height:24px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0}
+.ig{background:var(--g100)}.io{background:var(--o100)}.ib{background:var(--b100)}.ia{background:var(--a100)}.ir{background:var(--r100)}
+.ct{font-family:var(--fd);font-size:12px;font-weight:600;color:var(--n700)}
+.cb{padding:13px 15px 15px}
+.dr{display:flex;justify-content:space-between;align-items:baseline;padding:5px 0;border-bottom:1px solid var(--n100);gap:10px}
+.dr:last-child{border-bottom:none}
+.dl{font-size:11px;color:var(--n500);white-space:nowrap;flex-shrink:0}
+.dv{font-size:12px;color:var(--n800);font-weight:500;text-align:right}
+.bdg{display:inline-flex;align-items:center;font-size:10px;font-weight:700;font-family:var(--fd);letter-spacing:.03em;padding:2px 9px;border-radius:20px;white-space:nowrap}
+.br{background:var(--r100);color:#991b1b}.ba{background:var(--a100);color:#92400e}
+.bg{background:var(--g100);color:#166534}.bo{background:var(--o100);color:var(--o700)}
+.bs{background:var(--n100);color:var(--n700)}
+.score-row{display:flex;align-items:center;gap:12px;padding:7px 0 5px}
+.snum{font-family:var(--fd);font-size:30px;font-weight:800;color:var(--g700);line-height:1}
+.sdots{display:flex;gap:4px}
+.sd{width:9px;height:9px;border-radius:50%;background:var(--n200)}
+.sd.on{background:#22c55e}
+.slbl{font-size:11px;color:var(--n400);margin-top:2px}
+.vlist{display:flex;flex-direction:column;gap:7px;margin-top:9px}
+.vi{background:var(--n050);border:1px solid var(--n200);border-radius:7px;padding:8px 10px;transition:border-color .15s}
+.vi:hover{border-color:var(--g400)}
+.vn{font-size:12px;font-weight:500;color:var(--n900);margin-bottom:2px}
+.vr{font-size:11px;color:var(--n600);line-height:1.45}
+.vc{font-size:10px;color:var(--o600);margin-top:3px}
+.nlist{display:flex;flex-direction:column;gap:11px}
+.ni{display:grid;grid-template-columns:68px 1fr;gap:9px}
+.nd{font-size:10px;font-family:var(--fm);color:var(--n400);padding-top:1px}
+.nh{font-size:12px;font-weight:500;color:var(--n800);margin-bottom:2px}
+.nim{font-size:11px;color:var(--g700);line-height:1.4}
+.crm-hl{background:var(--a100);border:1px solid #fde68a;border-radius:7px;padding:8px 11px;font-size:11px;color:#78350f;display:flex;align-items:flex-start;gap:7px;line-height:1.5;margin-top:8px}
+.talk{background:linear-gradient(135deg,var(--g050),var(--o050));border:1px solid var(--g200);border-radius:10px;padding:15px 16px 13px;font-size:13.5px;color:var(--n800);line-height:1.75;position:relative}
+.cpbtn{position:absolute;top:9px;right:10px;font-family:var(--fb);font-size:10px;font-weight:500;background:#fff;border:1px solid var(--n200);border-radius:6px;padding:4px 10px;cursor:pointer;color:var(--n600);transition:all .15s}
+.cpbtn:hover{background:var(--g050);border-color:var(--g200);color:var(--g700)}
+.alist{display:flex;flex-direction:column;gap:6px}
+.ai-row{display:flex;align-items:flex-start;gap:8px;font-size:12px;color:var(--n700);line-height:1.5}
+.an{width:19px;height:19px;background:var(--g700);color:#fff;border-radius:50%;font-size:9px;font-weight:700;font-family:var(--fd);display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
+.qlist{display:flex;flex-direction:column;gap:9px}
+.qrow-q{display:flex;align-items:flex-start;gap:7px;font-size:12px;color:var(--n700);margin-bottom:4px}
+.qrow-a{display:flex;align-items:flex-start;gap:7px;font-size:12px;color:var(--n600);line-height:1.5}
+.qt{font-size:9px;font-weight:700;font-family:var(--fd);padding:2px 7px;border-radius:4px;flex-shrink:0;margin-top:1px}
+.qt.q{background:var(--n200);color:var(--n700)}.qt.a{background:var(--g100);color:#166534}
+.hlist{list-style:none;display:flex;flex-direction:column;gap:6px;counter-reset:hc}
+.hlist li{display:flex;align-items:flex-start;gap:8px;font-size:12px;color:var(--n700);line-height:1.5;counter-increment:hc}
+.hlist li::before{content:counter(hc);min-width:19px;height:19px;background:var(--o100);color:var(--o700);border-radius:50%;font-size:9px;font-weight:700;font-family:var(--fd);display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
+.rflist{display:flex;flex-direction:column;gap:6px}
+.rfi{display:flex;align-items:flex-start;gap:7px;background:var(--r100);border:1px solid #fecaca;border-radius:7px;padding:7px 10px;font-size:11px;color:#7f1d1d;line-height:1.4}
+.qbar{display:flex;align-items:center;gap:8px;padding:8px 15px;background:var(--n050);border-top:1px solid var(--n100);font-size:10px;color:var(--n400);flex-wrap:wrap}
+.err{background:var(--r100);border:1px solid #fecaca;border-radius:12px;padding:16px 20px;animation:fadeUp .3s both}
+.err-t{font-family:var(--fd);font-size:13px;font-weight:700;color:#991b1b;margin-bottom:7px}
+.err-b{font-size:12px;color:#7f1d1d;line-height:1.6}
+
+@media print{.topbar,.sidebar,.r-acts,.cpbtn,.sc{display:none!important}.app{grid-template-columns:1fr}.main{padding:0}}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- TOPBAR -->
+  <header class="topbar">
+    <div class="logo">Step<span>.</span>job<span class="logo-bdg">RA Tool</span></div>
+    <div class="topbar-right">
+      <div class="free-pill">
+        <div class="free-dot"></div>
+        無料・APIキー不要
+      </div>
+    </div>
+  </header>
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sb-body">
+      <div class="sec">📋 基本情報</div>
+      <div class="field"><label>会社名 <span class="req">*</span></label><input type="text" id="f_co" placeholder="例：株式会社〇〇フーズ"></div>
+      <div class="field"><label>業種</label>
+        <select id="f_ind">
+          <option value="">選択</option>
+          <option>食品製造・外食</option><option>介護・福祉</option><option>建設・土木</option>
+          <option>農業・林業・漁業</option><option>宿泊・ホテル</option><option>素形材・産業機械</option>
+          <option>電気・電子情報</option><option>IT・情報通信</option><option>物流・倉庫</option>
+          <option>製造業（その他）</option><option>サービス業</option><option>その他</option>
+        </select>
+      </div>
+      <div class="field"><label>従業員数</label>
+        <select id="f_emp">
+          <option value="">不明</option>
+          <option>〜20名</option><option>21〜50名</option><option>51〜100名</option>
+          <option>101〜300名</option><option>301〜1000名</option><option>1000名以上</option>
+        </select>
+      </div>
+      <div class="field"><label>所在地</label><input type="text" id="f_area" placeholder="例：愛知県名古屋市"></div>
+
+      <div class="sec">💼 採用・求人状況</div>
+      <div class="field"><label>現在の求人状況</label><textarea id="f_jobs" placeholder="例：製造スタッフ3名急募、調理スタッフ慢性不足"></textarea></div>
+      <div class="field"><label>外国人採用の状況</label>
+        <select id="f_fh">
+          <option value="">不明</option>
+          <option>求人票に「国籍不問」記載あり</option>
+          <option>外国人スタッフが在籍中（確認済）</option>
+          <option>技能実習の受入実績あり</option>
+          <option>特定技能採用の経験あり</option>
+          <option>外国人採用に言及なし</option>
+        </select>
+      </div>
+
+      <div class="sec">📰 直近ニュース</div>
+      <div class="field">
+        <label>ニュース・トピック</label>
+        <textarea id="f_news" placeholder="例：先月新工場稼働、FC店舗5店拡大など"></textarea>
+        <span class="hint">Perplexityで「企業名 最新ニュース」を検索してコピペすると効率的</span>
+      </div>
+
+      <div class="sec">📁 CRM・商談履歴</div>
+      <div class="field"><label>過去の接触・商談メモ</label><textarea id="f_crm" placeholder="例：2023年9月に商談。当時予算なしで失注。外国人採用に興味あり。"></textarea></div>
+
+      <div class="sec">📅 今回の商談情報</div>
+      <div class="field"><label>先方担当者名・役職</label><input type="text" id="f_con" placeholder="例：田中様（人事部長）"></div>
+      <div class="field"><label>商談日・形式</label><input type="text" id="f_mtg" placeholder="例：6月20日 オンライン"></div>
+      <div class="field"><label>アポ獲得経緯</label><textarea id="f_apt" placeholder="例：新工場稼働のタイミングで先方から連絡あり"></textarea></div>
+    </div>
+    <div class="sb-footer">
+      <button class="btn-gen" id="genBtn" onclick="generate()">
+        <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z"/>
+        </svg>
+        AIサマリーを生成
+      </button>
+      <div class="sc"><kbd>⌘</kbd>+<kbd>Enter</kbd> でも実行できます</div>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main" id="mainArea">
+    <div class="st-empty" id="stEmpty">
+      <div class="ei">📋</div>
+      <div class="et">商談前サマリーを生成</div>
+      <div class="ed">左フォームに企業情報を入力して「AIサマリーを生成」を押すだけ。<br>ログイン・APIキー・登録一切不要で動作します。</div>
+      <div class="e-steps">
+        <div class="e-step"><div class="e-num">1</div><p>企業情報を入力</p></div>
+        <div class="e-arr">→</div>
+        <div class="e-step"><div class="e-num">2</div><p>生成ボタンを押す</p></div>
+        <div class="e-arr">→</div>
+        <div class="e-step"><div class="e-num">3</div><p>サマリーを確認</p></div>
+      </div>
+    </div>
+    <div class="st-load" id="stLoad">
+      <div class="ring"></div>
+      <div class="ls-wrap">
+        <div class="ls" id="ls1">🔍 企業情報を分析中...</div>
+        <div class="ls" id="ls2">🎯 外国人採用適性を判定中...</div>
+        <div class="ls" id="ls3">💬 提案トークを生成中...</div>
+        <div class="ls" id="ls4">📄 シートを仕上げています...</div>
+      </div>
+    </div>
+    <div id="result"></div>
+  </main>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const esc = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+const bdg = (v,c) => `<span class="bdg ${c}">${esc(v)}</span>`;
+let busy=false, lt=null;
+
+/* ─ loading ─ */
+function startLoad(){
+  ['ls1','ls2','ls3','ls4'].forEach(id=>$(id).className='ls');
+  let i=0;
+  function t(){if(i>0)$('ls'+i).className='ls done';i++;if(i<=4){$('ls'+i).className='ls on';lt=setTimeout(t,900+Math.random()*550);}}
+  t();
+}
+function stopLoad(){clearTimeout(lt);['ls1','ls2','ls3','ls4'].forEach(id=>$(id).className='ls done');}
+
+function showState(s){
+  $('stEmpty').style.display='none';$('stLoad').style.display='none';$('result').innerHTML='';
+  if(s==='empty')$('stEmpty').style.display='flex';
+  if(s==='loading')$('stLoad').style.display='flex';
+}
+
+/* ─ form ─ */
+function getForm(){
+  const g=id=>$(id).value.trim();
+  return{co:g('f_co'),ind:g('f_ind'),emp:g('f_emp'),area:g('f_area'),jobs:g('f_jobs'),fh:g('f_fh'),news:g('f_news'),crm:g('f_crm'),con:g('f_con'),mtg:g('f_mtg'),apt:g('f_apt')};
+}
+
+/* ─ prompt ─ */
+function buildPrompt(d){
+  return `あなたはStepjob（外国人人材紹介会社）のRA専任AIアシスタントです。
+以下の企業情報をもとに商談前サマリーを生成してください。
+出力はJSONのみ。コードブロック・前置き・説明文は不要です。
+
+企業名：${d.co||'不明'}
+業種：${d.ind||'不明'}
+従業員数：${d.emp||'不明'}
+所在地：${d.area||'不明'}
+採用・求人状況：${d.jobs||'情報なし'}
+外国人採用状況：${d.fh||'不明'}
+直近ニュース：${d.news||'情報なし'}
+CRM・過去商談履歴：${d.crm||'記録なし'}
+先方担当者：${d.con||'不明'}
+商談日・形式：${d.mtg||'未定'}
+アポ獲得経緯：${d.apt||'不明'}
+
+Stepjobの強み：特定技能・技人国の採用支援、高い定着率、行政書士連携によるワンストップ在留手続き対応、介護・飲食料品製造・建設等の特定技能全分野対応。
+
+以下のJSONフォーマットで出力:
+{"company_overview":{"summary":"企業概要を外国人採用の文脈で2〜3文","business_type":"BtoB/BtoC/製造/サービス等","hiring_urgency":"高/中/低","hiring_urgency_reason":"緊急度の根拠1文"},"foreign_worker_fit":{"overall_score":4,"score_reason":"スコアの根拠2文","recommended_visa_types":[{"visa":"在留資格名","match_reason":"なぜ合うか","caution":"注意点またはnull"}],"estimated_challenges":["課題1","課題2","課題3"]},"news_insights":[{"headline":"見出し","date":"日時","ra_implication":"提案への活かし方1文"}],"crm_insights":{"has_history":true,"history_summary":"要約またはnull","re_approach_readiness":"高/中/低","re_approach_reason":"根拠1文","cautions_from_history":"注意点またはnull"},"approach_strategy":{"opening_talk":"商談最初の2〜3文を自然な日本語ビジネス口語で","key_appeal_points":["訴求1","訴求2","訴求3"],"objection_prep":[{"expected_objection":"想定断り文句","counter":"切り返しトーク"}],"questions_to_ask":["ヒアリング1","2","3","4","5"],"red_flags":[]},"meta":{"data_quality":"high/medium/low","missing_info":[]}}`;
+}
+
+/* ─ render ─ */
+function render(d,cname){
+  const co=d.company_overview||{},fw=d.foreign_worker_fit||{};
+  const ni=d.news_insights||[],ci=d.crm_insights||{};
+  const as=d.approach_strategy||{},mt=d.meta||{};
+  const sc=Number(fw.overall_score)||0;
+  const dots=Array.from({length:5},(_,i)=>`<div class="sd${i<sc?' on':''}"></div>`).join('');
+  const um={'高':'br','中':'ba','低':'bs'},rm={'高':'bg','中':'ba','低':'bs'};
+  const qm={'high':'bg','medium':'ba','low':'br'},ql={'high':'データ充実','medium':'一部不足','low':'情報少'};
+  const vH=(fw.recommended_visa_types||[]).map(v=>`<div class="vi"><div class="vn">${esc(v.visa)}</div><div class="vr">${esc(v.match_reason)}</div>${v.caution?`<div class="vc">⚠ ${esc(v.caution)}</div>`:''}</div>`).join('');
+  const chH=(fw.estimated_challenges||[]).map((c,i)=>`<div class="ai-row"><div class="an" style="background:var(--o500)">${i+1}</div>${esc(c)}</div>`).join('');
+  const nH=ni.length?ni.map(n=>`<div class="ni"><div class="nd">${esc(n.date)}</div><div><div class="nh">${esc(n.headline)}</div><div class="nim">→ ${esc(n.ra_implication)}</div></div></div>`).join(''):'<div style="font-size:12px;color:var(--n400)">ニュース情報が入力されませんでした</div>';
+  const cH=ci.has_history?`<div class="dr"><span class="dl">再アプローチのしやすさ</span><span class="dv">${bdg(ci.re_approach_readiness,rm[ci.re_approach_readiness]||'bs')}</span></div><div class="dr"><span class="dl">根拠</span><span class="dv" style="font-size:11px;font-weight:400">${esc(ci.re_approach_reason)}</span></div>${ci.history_summary?`<div class="dr"><span class="dl">履歴要約</span><span class="dv" style="font-size:11px;font-weight:400">${esc(ci.history_summary)}</span></div>`:''} ${ci.cautions_from_history?`<div class="crm-hl">⚠ 前回注意点：${esc(ci.cautions_from_history)}</div>`:''}`:'<div style="font-size:12px;color:var(--n400)">過去の接触履歴なし（新規開拓）</div>';
+  const tid='tk'+Date.now();
+  const apH=(as.key_appeal_points||[]).map((p,i)=>`<div class="ai-row"><div class="an">${i+1}</div>${esc(p)}</div>`).join('');
+  const obH=(as.objection_prep||[]).map(o=>`<div><div class="qrow-q"><span class="qt q">Q</span>${esc(o.expected_objection)}</div><div class="qrow-a"><span class="qt a">A</span>${esc(o.counter)}</div></div>`).join('');
+  const qH=(as.questions_to_ask||[]).map(q=>`<li>${esc(q)}</li>`).join('');
+  const rfH=(as.red_flags||[]).length?(as.red_flags||[]).map(r=>`<div class="rfi">🚩 ${esc(r)}</div>`).join(''):'<div style="font-size:12px;color:var(--g700)">✅ 特筆すべきリスク要因なし</div>';
+  const miH=(mt.missing_info||[]).map(m=>`<span class="bdg bs">${esc(m)}</span>`).join('');
+  const now=new Date().toLocaleString('ja-JP');
+
+  return `
+<div class="r-head">
+  <div><div class="r-name">${esc(cname)}</div>
+  <div class="r-meta">${co.business_type?`<span>🏢 ${esc(co.business_type)}</span>`:''}
+  <span>採用緊急度 ${bdg(co.hiring_urgency,um[co.hiring_urgency]||'bs')}</span>
+  <span>生成：${now}</span></div></div>
+  <div class="r-acts">
+    <button class="btn-act" onclick="window.print()">🖨 印刷</button>
+    <button class="btn-act" onclick="copyAll()">📋 全文コピー</button>
+  </div>
+</div>
+<div class="g2">
+  <div class="card tg"><div class="ch"><div class="ci ig">🏢</div><div class="ct">企業概要</div></div>
+  <div class="cb"><p style="font-size:12px;color:var(--n700);line-height:1.65;margin-bottom:10px">${esc(co.summary)}</p>
+  <div class="dr"><span class="dl">採用緊急度</span><span class="dv">${bdg(co.hiring_urgency,um[co.hiring_urgency]||'bs')}</span></div>
+  <div class="dr"><span class="dl">根拠</span><span class="dv" style="font-size:11px;font-weight:400">${esc(co.hiring_urgency_reason)}</span></div></div></div>
+  <div class="card to"><div class="ch"><div class="ci io">🌏</div><div class="ct">外国人採用適性</div></div>
+  <div class="cb"><div class="score-row"><div class="snum">${sc}</div><div><div class="sdots">${dots}</div><div class="slbl">/ 5 点</div></div></div>
+  <p style="font-size:11px;color:var(--n600);margin-bottom:4px;line-height:1.5">${esc(fw.score_reason)}</p>
+  <div class="vlist">${vH}</div>
+  ${chH?`<div style="font-size:9px;font-weight:700;color:var(--n400);text-transform:uppercase;letter-spacing:.08em;margin:10px 0 6px">想定される課題</div><div class="alist">${chH}</div>`:''}</div></div>
+  <div class="card tb"><div class="ch"><div class="ci ib">📰</div><div class="ct">直近ニュース / 提案への活かし方</div></div>
+  <div class="cb"><div class="nlist">${nH}</div></div></div>
+  <div class="card ta"><div class="ch"><div class="ci ia">📁</div><div class="ct">CRM履歴 / 再アプローチ分析</div></div>
+  <div class="cb">${cH}</div></div>
+</div>
+<div class="g1">
+  <div class="card tg"><div class="ch"><div class="ci ig">💬</div><div class="ct">推奨オープニングトーク（コピーしてすぐ使えます）</div></div>
+  <div class="cb"><div class="talk" id="${tid}"><button class="cpbtn" onclick="copyTalk('${tid}')">コピー</button>${esc(as.opening_talk)}</div></div></div>
+</div>
+<div class="g2">
+  <div class="card tg"><div class="ch"><div class="ci ig">🎯</div><div class="ct">この企業への訴求ポイント</div></div>
+  <div class="cb"><div class="alist">${apH}</div></div></div>
+  <div class="card to"><div class="ch"><div class="ci io">❓</div><div class="ct">商談中に必ず確認すること</div></div>
+  <div class="cb"><ul class="hlist">${qH}</ul></div></div>
+  <div class="card tb"><div class="ch"><div class="ci ib">🔄</div><div class="ct">想定断り文句 / 切り返しトーク</div></div>
+  <div class="cb"><div class="qlist">${obH}</div></div></div>
+  <div class="card tr"><div class="ch"><div class="ci ir">🚩</div><div class="ct">注意 / リスク要因</div></div>
+  <div class="cb"><div class="rflist">${rfH}</div></div></div>
+</div>
+<div class="card" style="animation-delay:.43s">
+  <div class="qbar">データ品質：${bdg(ql[mt.data_quality]||mt.data_quality,qm[mt.data_quality]||'bs')}
+  ${miH?`<span style="margin-left:4px">不足情報：</span>${miH}`:''}
+  <span style="margin-left:auto">Powered by Puter.js / Stepjob RA Tool</span></div>
+</div>`;
+}
+
+/* ─ copy ─ */
+function copyTalk(id){
+  const el=$(id);if(!el)return;
+  const btn=el.querySelector('.cpbtn');
+  const txt=el.innerText.replace(btn?btn.innerText:'','').trim();
+  navigator.clipboard.writeText(txt).then(()=>{if(btn){btn.textContent='✓ コピー済';setTimeout(()=>btn.textContent='コピー',1800);}});
+}
+function copyAll(){
+  const el=$('result');if(!el)return;
+  navigator.clipboard.writeText(el.innerText).then(()=>alert('全文をクリップボードにコピーしました'));
+}
+
+/* ─ generate ─ */
+async function generate(){
+  if(busy)return;
+  const d=getForm();
+  if(!d.co){alert('会社名を入力してください');$('f_co').focus();return;}
+  busy=true;
+  const btn=$('genBtn');
+  btn.disabled=true;
+  btn.innerHTML='<div class="ring" style="width:14px;height:14px;border-width:2px;margin:0"></div> 生成中...';
+  showState('loading');startLoad();
+  try{
+    const prompt=buildPrompt(d);
+    /* Puter.js — ログイン不要でそのまま呼び出す */
+    const response = await puter.ai.chat(prompt, {model:'claude-sonnet-4-6'});
+    stopLoad();
+    /* レスポンスからテキスト抽出 */
+    let raw='';
+    if(typeof response==='string'){raw=response;}
+    else if(response?.message?.content){
+      const c=response.message.content;
+      raw=Array.isArray(c)?c.map(x=>x.text||'').join(''):String(c);
+    } else if(response?.text){raw=response.text;}
+    else{raw=String(response);}
+    /* JSON抽出 */
+    let txt=raw.trim().replace(/^```json\s*/i,'').replace(/^```\s*/i,'').replace(/\s*```$/,'');
+    const m=txt.match(/\{[\s\S]*\}/);if(m)txt=m[0];
+    let parsed;
+    try{parsed=JSON.parse(txt);}
+    catch(e){throw new Error('AIの応答をJSONとして解析できませんでした。再試行してください。\n\n'+txt.slice(0,200));}
+    showState('result');
+    $('result').innerHTML=render(parsed,d.co);
+    $('mainArea').scrollTo({top:0,behavior:'smooth'});
+  }catch(e){
+    stopLoad();showState('result');
+    $('result').innerHTML=`<div class="err"><div class="err-t">⚠ エラーが発生しました</div><div class="err-b">${esc(e.message)}<br><br>・ネットワーク接続を確認してください<br>・しばらく待ってから再試行してください</div></div>`;
+  }finally{
+    busy=false;btn.disabled=false;
+    btn.innerHTML='<svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z"/></svg>AIサマリーを生成';
+  }
+}
+document.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key==='Enter')generate();});
+</script>
+</body>
+</html>
